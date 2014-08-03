@@ -1,0 +1,252 @@
+/* Author:
+
+*/
+	//constructors of Member, Idea, Like, Rally, RSVP.
+	function Member(memberName, imageLink){
+		this.memberName = memberName;
+		this.imageLink = imageLink;
+		this.memberScore = 800;
+		var date = new Date();
+		this.postTime = date.getTime();
+	
+	}
+	
+	//a copy of the Idea object that does not contain methods in it so it can be converted to JSON
+	function IdeaForJSON(ideaPost, tags){
+		this.ideaPost = ideaPost;
+		this.tags = tags;
+		var date = new Date();
+		this.postTime = date.getTime();
+		this.relatedLikes = [];
+		this.relatedRallies = [];
+	}
+	//a copy of the Idea object that contains methods
+	function IdeaWithMethods(ideaForJSON){
+		this.ideaPost = ideaForJSON.ideaPost;
+		this.tags = ideaForJSON.tags;
+		this.postTime = ideaForJSON.postTime;
+		this.relatedLikes = ideaForJSON.relatedLikes;
+		this.relatedRallies = ideaForJSON.relatedRallies;
+		this.updateRelatedLikes = function(){
+				
+		};
+		this.updateRelatedRallies = function(){
+		
+		};
+	
+	}
+	
+	
+	
+	function Like(relatedIdea, relatedMember){
+		this.relatedIdea = relatedIdea;
+		this.relatedMember = relatedMember;
+		this.postTime = new Date();
+		
+
+	}
+	
+	function Rally( relatedIdea, rallyStartTime, initiator){
+		this.relatedIdea = relatedIdea;
+		this.rallyStartTime = rallyStartTime;
+		this.initiator = initiator;
+		var tempDate = new Date();
+		this.postTime = tempDate.getTime();
+		this.relatedRSVPs = [];
+	
+	}
+	
+	function RSVP(relatedRally, RSVPMember){
+		this.relatedRally = relatedRally;
+		this.RSVPMember = RSVPMember;
+		var tempDate = new Date();
+		this.postTime = tempDate.getTime();
+		
+		
+	}
+	
+	//convert an ideaObj that has no methods to an object that has methods
+	function convertToIdeaObj(ideaForJSONObj){
+		var ideaObj = new IdeaWithMethods(ideaForJSONObj);
+		return ideaObj;	
+	}
+	
+	
+	
+	function postIdeas(){
+		var post = document.getElementById("inputIdea").value;
+		var tags = document.getElementById("inputTags").value;
+		if (!post || !tags)
+			alert("what's your idea again?");
+		else{
+			var newPostForJSON = new IdeaForJSON(post, tags);
+			var newPost = convertToIdeaObj(newPostForJSON);  //create both the postObj for JSON as well as the real object that has methods
+			var postId = "post_" + newPostForJSON.postTime; 
+			var postIdArray = getIdArray("postIdList");
+			postIdArray.push(postId);		
+			localStorage.setItem("postIdList", JSON.stringify(postIdArray));
+			localStorage.setItem(postId, JSON.stringify(newPostForJSON));
+			addPostToDOM(postId, newPost);
+			document.getElementById("inputIdea").value = "";
+			document.getElementById("inputTags").value = "";
+		}
+	};
+	
+	function addPostToDOM(id, postObj){
+		var post = postObj.ideaPost;
+		var tags = postObj.tags;
+		var numOfLikes = postObj.relatedLikes.length;
+		var numOfRallies = postObj.relatedRallies.length;
+		var parentDiv = document.getElementById("all_post"); 
+		var postLi = document.createElement("li"); //each post is within the container of an li
+		postLi.setAttribute("class", "idea_post");
+		parentDiv.appendChild(postLi);
+		//now withing postLi, we display the content of the post
+		var ideaDiv = document.createElement("div");
+		ideaDiv.innerHTML = post;
+		var tagsDiv = document.createElement("div");
+		tagsDiv.innerHTML = tags;
+		var likeCountDiv = document.createElement("div");
+		likeCountDiv.innerHTML = numOfLikes + " likes";
+		var rallyCountDiv = document.createElement("div");
+		rallyCountDiv.innerHTML = numOfRallies + " rallies"; 
+		postLi.appendChild(ideaDiv);
+		postLi.appendChild(tagsDiv);
+		postLi.appendChild(likeCountDiv);
+		postLi.appendChild(rallyCountDiv);	
+	}
+	
+	function displayAllPosts(){
+		//delete all the displaying ones then display all 
+		var ulContainerDiv = document.getElementById("all_post");
+		if (ulContainerDiv.childNodes.length > 0){
+			while (ulContainerDiv.firstChild)
+				ulContainerDiv.removeChild(ulContainerDiv.firstChild);
+		}
+		var postIdArray = getIdArray("postIdList");
+		for (i = 0; i < postIdArray.length; i++){
+			var key = postIdArray[i];
+			var postObj = convertToIdeaObj(JSON.parse(localStorage[key]));
+			addPostToDOM(key, postObj);		
+		}
+	}
+	
+	
+	//methods to addMembers, it add each member into localStorage with a key, and also save the key array into one localStorage item
+	//it also displays the member on the website for now by calling addMemberToDOM
+	function addMembers(){
+		var name = document.getElementById("inputMember").value;
+		var URL= document.getElementById("inputPhotoLink").value;
+		if (!name || !URL)
+			alert("name and photo, please");
+		else{
+			var newMember = new Member(name, URL);
+			var memberId = "member_" + newMember.postTime; 
+			var memberIdArray = getIdArray("memberIdChain");
+			memberIdArray.push(memberId);		
+			localStorage.setItem("memberIdChain", JSON.stringify(memberIdArray));
+			localStorage.setItem(memberId, JSON.stringify(newMember));
+			addMemberToDOM(memberId, newMember);
+			document.getElementById("inputMember").value = "";
+			document.getElementById("inputPhotoLink").value = "";
+		}
+	};
+	
+	//method to take a key for an keyArray, return the array of the keys from localStorage, and convert them back to an array
+	function getIdArray(idChain){
+		var idArray = localStorage.getItem(idChain);
+		if (!idArray){
+			idArray = [];
+			localStorage.setItem(idChain, JSON.stringify(idArray));
+		}
+		else{
+			idArray = JSON.parse(localStorage[idChain]);
+		}
+		return idArray;	
+	}
+	
+	//to go through the key array for the members and display them all. It first checks and delete all existing ones in DOM that's already displaying
+	function displayAllMembers(){
+		var memberIdArray = getIdArray("memberIdChain");
+		//clear out the current member display to avoid dupe
+		var memberSectionDiv = document.getElementById("all_members");
+		if (memberSectionDiv.childNodes.length > 0){
+			while (memberSectionDiv.firstChild)
+				memberSectionDiv.removeChild(memberSectionDiv.firstChild);
+		}
+		//now show all members	
+		for (i=0; i<memberIdArray.length; i++){
+			var memberId = memberIdArray[i];
+			var memberObj = JSON.parse(localStorage[memberId]);
+			addMemberToDOM(memberId, memberObj);
+		}
+	}
+	
+	//to grab a key and a member object and display the member in DOM
+	function addMemberToDOM(id, member){
+		var nameValue = member.memberName;
+		var URLValue = member.imageLink;
+		var memberSectionDiv = document.getElementById("all_members");
+		var memberCard = document.createElement("div");
+		memberCard.setAttribute("id", id);
+		memberCard.setAttribute("class", "memberCard");
+		memberSectionDiv.appendChild(memberCard);
+		var name = document.createElement("div");
+		var image = document.createElement("image");
+		image.setAttribute("class", "memberPhoto");
+		name.innerHTML = nameValue;
+		image.src = URLValue;
+		memberCard.appendChild(name);
+		memberCard.appendChild(image);	
+	}
+
+	function populateUserToggle(){
+		var userToggleDiv = document.getElementById("userToggle");
+		var memberIdArray = getIdArray("memberIdChain");
+		for (i = 0; i < memberIdArray.length; i++){
+			var memberId = memberIdArray[i];
+			var memberObj = JSON.parse(localStorage[memberId]);
+			var memberOption = document.createElement("option");
+			memberOption.text = memberObj.memberName;
+			memberOption.setAttribute("id", memberId);	
+			userToggleDiv.appendChild(memberOption);
+		}
+	}
+
+	
+	
+	function init(){
+	var addMember = document.getElementById("addMemberBtn");
+	addMember.onclick = addMembers;
+	var addIdea = document.getElementById("addIdeaBtn");
+	addIdea.onclick = postIdeas;	
+	var showMembers = document.getElementById("displayMemberBtn");
+	showMembers.onclick = displayAllMembers;		
+	displayAllPosts();
+	populateUserToggle(); //temp user selector before implemeting FB connector
+	//To Do: create an object that picks the current user from the Toggle
+	
+	
+	}
+	window.onload = init;
+  
+  
+  
+  
+  
+  
+  
+	function swapFriendPic(imgElementId, mouseEvent){
+		var imgElementId;
+		var mouseEvent; //0 means mouseover, 1 means mouseout
+		if (mouseEvent == 0)
+			{
+			document.getElementById(imgElementId).src = "img/friendActivity_hoverOver.jpg";	
+			}
+		else
+			document.getElementById(imgElementId).src = "img/friendActivity.jpg";	
+	}
+
+
+
+
